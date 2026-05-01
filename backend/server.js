@@ -11,23 +11,29 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// Always allow dev origins + production frontend URL from env
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  process.env.CLIENT_URL,
+  'https://taskmanager-beryl-sigma.vercel.app', // production frontend
+  process.env.CLIENT_URL,                        // override via Render env var
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS blocked: ${origin}`));
+      // Allow Postman / curl / mobile (no origin header)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
+// Handle preflight for all routes
+app.options('*', cors());
 
 app.use(express.json());
 
